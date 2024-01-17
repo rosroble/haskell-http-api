@@ -20,6 +20,7 @@ import Prelude.Compat
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad (mzero)
+import Control.Applicative (empty, (<|>))
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Attoparsec.ByteString
@@ -40,6 +41,7 @@ import Network.Wai.Handler.Warp
 import Servant
 import System.Directory
 import Text.Blaze
+import Text.Read (readMaybe, readEither)
 import Text.Blaze.Html.Renderer.Utf8
 import Servant.Types.SourceT (source)
 import qualified Data.Aeson.Parser
@@ -47,7 +49,8 @@ import qualified Text.Blaze.Html
 import Data.Scientific (toBoundedInteger)
 import Data.IORef
 import Control.Monad.IO.Class (liftIO)
-
+import Servant.XML
+import Xmlbf
 
 -- POST /set
 -- {key: "abc", "value": 1123}
@@ -57,15 +60,17 @@ import Control.Monad.IO.Class (liftIO)
 
 type SetEndpoint = 
     "set"
-    :> ReqBody '[JSON] KVEntry
+    :> ReqBody '[JSON, XML] KVEntry
     :> Post '[JSON] NoContent
 
 type GetEndpoint = 
     "get"
-    :> ReqBody '[JSON] GetRequest
+    :> ReqBody '[JSON, XML] GetRequest
     :> Get '[JSON] KVEntry
 
 data KeyValueType = KVString String | KVInteger Integer deriving (Eq, Show, Generic, Ord)
+
+--- JSON ---
 
 instance FromJSON KeyValueType where
   parseJSON (String s) = pure $ KVString (T.unpack s)
@@ -80,6 +85,22 @@ instance ToJSON KeyValueType where
 instance IsString KeyValueType where
   fromString str = KVString str
 
+--- XML ---
+
+instance FromXml KeyValueType where
+  fromXml = fromXmlString <|> fromXmlInteger
+    where
+      fromXmlString = pElement "KeyValue" $
+        pAttr "type" >>= \t -> case t of
+          "string" -> KVString . T.unpack <$> pText
+          _        -> Control.Applicative.empty
+
+      fromXmlInteger = pElement "KeyValue" $
+        pAttr "type" >>= \t -> case t of
+          "integer" -> KVInteger <$> (pText >>= maybe Control.Applicative.empty pure . Text.Read.readMaybe . T.unpack)
+          _         -> Control.Applicative.empty
+
+----
 data KVEntry = KVEntry {
     key :: KeyValueType,
     value :: KeyValueType 
@@ -88,12 +109,22 @@ data KVEntry = KVEntry {
 instance FromJSON KVEntry
 instance ToJSON KVEntry
 
+instance FromXml KVEntry where
+  fromXml = pElement "SetRequest" $ do
+    k <- pElement "Key" fromXml
+    v <- pElement "Value" fromXml
+    pure KVEntry{ key = k, value = v}
 
 data GetRequest = GetRequest {
     key :: KeyValueType
 } deriving (Eq, Show, Generic)
 
 instance FromJSON GetRequest
+
+instance FromXml GetRequest where
+  fromXml = pElement "GetRequest" $ do
+    k <- pElement "Key" fromXml
+    pure GetRequest{ key = k }
 
 type KVAPI = SetEndpoint :<|> GetEndpoint
 
