@@ -39,6 +39,7 @@ dependencies:
 - blaze-markup
 - blaze-html
 - scientific
+- containers
 
 
 

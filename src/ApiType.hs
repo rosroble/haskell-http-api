@@ -12,7 +12,7 @@
 
 
 
-module ApiType (app1, kvapp) where
+module ApiType (app1, app, kvapp, KeyValueType) where
 
 import Prelude ()
 import Prelude.Compat
@@ -25,6 +25,7 @@ import Data.Aeson.Types
 import Data.Attoparsec.ByteString
 import Data.ByteString (ByteString)
 import Data.List
+import Data.Map
 import Data.Maybe
 import Data.String.Conversions
 import Data.String (IsString, fromString)
@@ -44,6 +45,9 @@ import Servant.Types.SourceT (source)
 import qualified Data.Aeson.Parser
 import qualified Text.Blaze.Html
 import Data.Scientific (toBoundedInteger)
+import Data.IORef
+import Control.Monad.IO.Class (liftIO)
+
 
 -- POST /set
 -- {key: "abc", "value": 1123}
@@ -61,7 +65,7 @@ type GetEndpoint =
     :> ReqBody '[JSON] GetRequest
     :> Get '[JSON] KVEntry
 
-data KeyValueType = KVString String | KVInteger Integer deriving (Eq, Show, Generic)
+data KeyValueType = KVString String | KVInteger Integer deriving (Eq, Show, Generic, Ord)
 
 instance FromJSON KeyValueType where
   parseJSON (String s) = pure $ KVString (T.unpack s)
@@ -93,18 +97,24 @@ instance FromJSON GetRequest
 
 type KVAPI = SetEndpoint :<|> GetEndpoint
 
-kvserver :: Server KVAPI
-kvserver = serveSet
+kvserver :: IORef (Map KeyValueType KeyValueType) -> Server KVAPI
+kvserver ref = serveSet
         :<|> serveGet
 
     where 
         serveSet :: KVEntry -> Handler NoContent
-        serveSet (KVEntry k v) = return NoContent
+        serveSet (KVEntry k v) = liftIO $ modifyIORef ref (\m -> Data.Map.insert k v m) >> return NoContent
+        -- serveSet (KVEntry k v) = return NoContent
 
         serveGet :: GetRequest -> Handler KVEntry
-        serveGet (GetRequest (KVString "x")) = return (KVEntry "x" "value_x")
-        serveGet (GetRequest (KVString "y")) = return (KVEntry "y" "value_y")
-        serveGet (GetRequest other) = return (KVEntry other "unexpected_key")
+        serveGet (GetRequest k) = do
+          map <- liftIO $ readIORef ref
+          case Data.Map.lookup k map of
+            Just v -> return (KVEntry k v)
+            Nothing -> throwError $ err404 {errBody = "Key not found"}
+        -- serveGet (GetRequest (KVString "x")) = return (KVEntry "x" "value_x")
+        -- serveGet (GetRequest (KVString "y")) = return (KVEntry "y" "value_y")
+        -- serveGet (GetRequest other) = return (KVEntry other "unexpected_key")
 
 
 kvAPI :: Proxy KVAPI
@@ -113,9 +123,13 @@ kvAPI = Proxy
 -- 'serve' comes from servant and hands you a WAI Application,
 -- which you can think of as an "abstract" web application,
 -- not yet a webserver.
-kvapp :: Application
-kvapp = serve kvAPI kvserver
+kvapp :: IORef (Map KeyValueType KeyValueType) -> Application
+kvapp ref = serve kvAPI (kvserver ref)
 
+
+
+
+-------------------------------
 -- more endpoints:
 
 type UserAPI2 = "users" :> Get '[JSON] [User]
@@ -204,3 +218,23 @@ userAPI = Proxy
 -- not yet a webserver.
 app1 :: Application
 app1 = serve userAPI server1
+
+------------- MUTABLE STATE EXAMPLE ----------------
+
+-- Define API: endpoints to get and set the integer
+type API = "get" :> Get '[JSON] Int
+      :<|> "set" :> ReqBody '[JSON] Int :> PostNoContent
+
+-- Define server handlers
+server :: IORef Int -> Server API
+server ref = getInt :<|> setInt
+    where
+    getInt :: Handler Int
+    getInt = liftIO $ readIORef ref
+
+    setInt :: Int -> Handler NoContent
+    setInt newInt = liftIO $ writeIORef ref newInt >> return NoContent
+
+-- Initialize the application
+app :: IORef Int -> Application
+app ref = serve (Proxy :: Proxy API) (server ref)

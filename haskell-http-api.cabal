@@ -41,6 +41,7 @@ library
     , blaze-html
     , blaze-markup
     , bytestring
+    , containers
     , directory
     , http-media
     , lucid
@@ -72,6 +73,7 @@ executable haskell-http-api-exe
     , blaze-html
     , blaze-markup
     , bytestring
+    , containers
     , directory
     , haskell-http-api
     , http-media
@@ -105,6 +107,7 @@ test-suite haskell-http-api-test
     , blaze-html
     , blaze-markup
     , bytestring
+    , containers
     , directory
     , haskell-http-api
     , hspec
