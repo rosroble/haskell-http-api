@@ -7,12 +7,13 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
 
-module ApiType (app1, app, kvapp, KeyValueType) where
+module ApiType (kvapp, KeyValueType, KVAPI) where
 
 import Prelude ()
 import Prelude.Compat
@@ -23,6 +24,7 @@ import Control.Monad (mzero)
 import Control.Applicative (empty, (<|>))
 import Data.Aeson
 import Data.Aeson.Types
+import Data.Aeson.TypeScript.TH
 import Data.Attoparsec.ByteString
 import Data.ByteString (ByteString)
 import Data.List
@@ -51,12 +53,6 @@ import Data.IORef
 import Control.Monad.IO.Class (liftIO)
 import Servant.XML
 import Xmlbf
-
--- POST /set
--- {key: "abc", "value": 1123}
-
--- GET /get
--- {key: "abc"} or {key: 135} or {key: [1,5,7,13]}
 
 type SetEndpoint = 
     "set"
@@ -106,6 +102,7 @@ data KVEntry = KVEntry {
     value :: KeyValueType 
 } deriving (Eq, Show, Generic)
 
+
 instance FromJSON KVEntry
 instance ToJSON KVEntry
 
@@ -119,6 +116,14 @@ data GetRequest = GetRequest {
     key :: KeyValueType
 } deriving (Eq, Show, Generic)
 
+--- TypeScript Client Gen ---
+
+$(deriveTypeScript defaultOptions ''KeyValueType)
+$(deriveTypeScript defaultOptions ''KVEntry)
+$(deriveTypeScript defaultOptions ''GetRequest)
+$(deriveTypeScript defaultOptions ''NoContent)
+
+------------------------------
 instance FromJSON GetRequest
 
 instance FromXml GetRequest where
@@ -135,7 +140,6 @@ kvserver ref = serveSet
     where 
         serveSet :: KVEntry -> Handler NoContent
         serveSet (KVEntry k v) = liftIO $ modifyIORef ref (\m -> Data.Map.insert k v m) >> return NoContent
-        -- serveSet (KVEntry k v) = return NoContent
 
         serveGet :: GetRequest -> Handler KVEntry
         serveGet (GetRequest k) = do
@@ -143,129 +147,9 @@ kvserver ref = serveSet
           case Data.Map.lookup k map of
             Just v -> return (KVEntry k v)
             Nothing -> throwError $ err404 {errBody = "Key not found"}
-        -- serveGet (GetRequest (KVString "x")) = return (KVEntry "x" "value_x")
-        -- serveGet (GetRequest (KVString "y")) = return (KVEntry "y" "value_y")
-        -- serveGet (GetRequest other) = return (KVEntry other "unexpected_key")
-
 
 kvAPI :: Proxy KVAPI
 kvAPI = Proxy
 
--- 'serve' comes from servant and hands you a WAI Application,
--- which you can think of as an "abstract" web application,
--- not yet a webserver.
 kvapp :: IORef (Map KeyValueType KeyValueType) -> Application
 kvapp ref = serve kvAPI (kvserver ref)
-
-
-
-
--------------------------------
--- more endpoints:
-
-type UserAPI2 = "users" :> Get '[JSON] [User]
-           :<|> "albert" :> Get '[JSON] User
-           :<|> "isaac" :> Get '[JSON] User
-
-isaac :: User
-isaac = User "Isaac Newton" 372 "isaac@newton.co.uk" (fromGregorian 1683 3 1)
-
-albert :: User
-albert = User "Albert Einstein" 136 "ae@mc2.org" (fromGregorian 1905 12 1)
-
-users2 :: [User]
-users2 = [isaac, albert]
-
-server2 :: Server UserAPI2
-server2 = return users2
-     :<|> return albert
-     :<|> return isaac
-
-
-
--- GET /users?sortby={age,name}
--- return a list sorted by age or name
--- with fields age, name, email, registration_date
-
--- type UserAPI = 
---     "users" 
---     :> QueryParam "sortby" SortBy 
---     :> Get '[JSON] [User]
-
--- if we want API with multiple endpoints - use :<|> operator
-
--- type UserAPI2 = 
---   "users" :> "list-all" :> Get '[JSON] [User]
---   :<|> 
---   "list-all" :> "users" :> Get '[JSON] [User]
--- provides /user/list-all and /list-all/users endpoints
-
-
--- Captures allow URL parameters like /users/1, /users/104 etc.
-
--- type UserAPI5 = "user" :> Capture "userid" Integer :> Get '[JSON] User
-                -- equivalent to 'GET /user/:userid'
-                -- except that we explicitly say that "userid"
-                -- must be an integer
-
---            :<|> "user" :> Capture "userid" Integer :> DeleteNoContent '[JSON] NoContent
-                -- equivalent to 'DELETE /user/:userid'
-
--- data SortBy = Age | Name
-
--- data User = User {
---     name :: String,
---     age :: Int,
---     email :: String,
---     registration_date :: UTCTime
--- }
-
-
-type UserAPI1 = "users" :> Get '[JSON] [User]
-
-data User = User
-  { name :: String
-  , age :: Int
-  , email :: String
-  , registration_date :: Day
-  } deriving (Eq, Show, Generic)
-
-instance ToJSON User
-
-users1 :: [User]
-users1 =
-  [ User "Isaac Newton"    372 "isaac@newton.co.uk" (fromGregorian 1683  3 1)
-  , User "Albert Einstein" 136 "ae@mc2.org"         (fromGregorian 1905 12 1)
-  ]
-
-server1 :: Server UserAPI1
-server1 = return users1
-
-userAPI :: Proxy UserAPI1
-userAPI = Proxy
-
--- 'serve' comes from servant and hands you a WAI Application,
--- which you can think of as an "abstract" web application,
--- not yet a webserver.
-app1 :: Application
-app1 = serve userAPI server1
-
-------------- MUTABLE STATE EXAMPLE ----------------
-
--- Define API: endpoints to get and set the integer
-type API = "get" :> Get '[JSON] Int
-      :<|> "set" :> ReqBody '[JSON] Int :> PostNoContent
-
--- Define server handlers
-server :: IORef Int -> Server API
-server ref = getInt :<|> setInt
-    where
-    getInt :: Handler Int
-    getInt = liftIO $ readIORef ref
-
-    setInt :: Int -> Handler NoContent
-    setInt newInt = liftIO $ writeIORef ref newInt >> return NoContent
-
--- Initialize the application
-app :: IORef Int -> Application
-app ref = serve (Proxy :: Proxy API) (server ref)
