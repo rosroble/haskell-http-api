@@ -22,7 +22,9 @@ jobs:
         ghc-version: 'latest' 
         enable-stack: true
         stack-version: 'latest'
-
+    
+    - uses: freckle/stack-cache-action@v2
+    
     - name: 'Run tests'
       run: stack test
 
