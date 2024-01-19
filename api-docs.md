@@ -11,7 +11,7 @@
 - Example (`application/json;charset=utf-8`, `application/json`):
 
 ```javascript
-{"key":{"contents":"key_to_lookup","tag":"KVString"}}
+{"key":"key_to_lookup"}
 ```
 
 - Example (`application/xml;charset=utf-8`):
@@ -33,13 +33,13 @@
 - Example (`application/json;charset=utf-8`, `application/json`):
 
 ```javascript
-{"key":{"contents":"Alex","tag":"KVString"},"value":{"contents":22,"tag":"KVInteger"}}
+{"key":"Alex","value":22}
 ```
 
 - Example (`application/json;charset=utf-8`, `application/json`):
 
 ```javascript
-{"key":{"contents":1024,"tag":"KVInteger"},"value":{"contents":"abc","tag":"KVString"}}
+{"key":1024,"value":"abc"}
 ```
 
 ## POST /set
@@ -55,7 +55,7 @@
 - Example (`application/json;charset=utf-8`, `application/json`):
 
 ```javascript
-{"key":{"contents":"Alex","tag":"KVString"},"value":{"contents":22,"tag":"KVInteger"}}
+{"key":"Alex","value":22}
 ```
 
 - Example (`application/xml;charset=utf-8`):
@@ -67,7 +67,7 @@
 - Example (`application/json;charset=utf-8`, `application/json`):
 
 ```javascript
-{"key":{"contents":1024,"tag":"KVInteger"},"value":{"contents":"abc","tag":"KVString"}}
+{"key":1024,"value":"abc"}
 ```
 
 ### Response:
@@ -79,4 +79,10 @@
 
     - `application/json;charset=utf-8`
     - `application/json`
+
+- Example (`application/json;charset=utf-8`, `application/json`):
+
+```javascript
+
+```
 

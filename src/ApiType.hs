@@ -54,14 +54,16 @@ instance FromJSON KeyValueType where
   parseJSON _ = mzero
 
 instance ToJSON KeyValueType where
-  toJSON = genericToJSON defaultOptions
+  toJSON (KVString s) = toJSON s
+  toJSON (KVInteger i) = toJSON i
 
 instance IsString KeyValueType where
   fromString = KVString
 
 instance FromJSON KVEntry
 
-instance ToJSON KVEntry
+instance ToJSON KVEntry where
+  toJSON (KVEntry k v) = object ["key" .= k, "value" .= v]
 
 instance FromJSON GetRequest
 

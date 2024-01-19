@@ -132,6 +132,7 @@ test-suite haskell-http-api-test
     , hspec-wai
     , hspec-wai-json
     , http-media
+    , http-types
     , lucid
     , mtl
     , optparse-applicative
@@ -147,6 +148,7 @@ test-suite haskell-http-api-test
     , unordered-containers
     , wai
     , warp
+    , wreq
     , xmlbf
     , xmlbf-xeno
   default-language: Haskell2010
