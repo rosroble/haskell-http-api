@@ -13,7 +13,7 @@
 
 module ApiType (kvapp, kvAPI, KeyValueType (..), KVEntry (..), GetRequest (..), KVAPI) where
 
-import Control.Applicative (empty, (<|>))
+import Control.Applicative (empty, many)
 import Control.Monad.Except
 import Data.Aeson
 import Data.Aeson.TypeScript.TH
@@ -23,6 +23,7 @@ import Data.Map
 import Data.Scientific (toBoundedInteger)
 import Data.String (IsString, fromString)
 import Data.Text hiding (head)
+import Data.Vector as V hiding (head)
 import GHC.Generics
 import Network.Wai
 import Prelude.Compat
@@ -30,7 +31,7 @@ import Servant
 import Servant.XML
 import Text.Read (readMaybe)
 import Xmlbf
-import Prelude ()
+import qualified Prelude as P
 
 type SetEndpoint =
   "set"
@@ -42,7 +43,7 @@ type GetEndpoint =
     :> ReqBody '[JSON, XML] GetRequest
     :> Get '[JSON] KVEntry
 
-data KeyValueType = KVString String | KVInteger Integer deriving (Eq, Show, Generic, Ord)
+data KeyValueType = KVString String | KVInteger Integer | KVList [KeyValueType] deriving (Eq, Show, Generic, Ord)
 
 --- JSON ---
 
@@ -51,11 +52,13 @@ instance FromJSON KeyValueType where
   parseJSON (Number n) = case toBoundedInteger n :: Maybe Int of
     Just i -> pure $ KVInteger (toInteger i)
     Nothing -> mzero
+  parseJSON (Array a) = KVList <$> P.mapM parseJSON (V.toList a)
   parseJSON _ = mzero
 
 instance ToJSON KeyValueType where
   toJSON (KVString s) = toJSON s
   toJSON (KVInteger i) = toJSON i
+  toJSON (KVList l) = toJSON l
 
 instance IsString KeyValueType where
   fromString = KVString
@@ -71,23 +74,18 @@ instance ToJSON GetRequest
 
 --- XML ---
 instance FromXml KeyValueType where
-  fromXml = fromXmlString <|> fromXmlInteger
-    where
-      fromXmlString =
-        pElement "KeyValue" $
-          pAttr "type" >>= \t -> case t of
-            "string" -> KVString . unpack <$> pText
-            _ -> Control.Applicative.empty
-
-      fromXmlInteger =
-        pElement "KeyValue" $
-          pAttr "type" >>= \t -> case t of
-            "integer" -> KVInteger <$> (pText >>= maybe Control.Applicative.empty pure . Text.Read.readMaybe . unpack)
-            _ -> Control.Applicative.empty
+  fromXml =
+    pElement "KeyValue" $
+      pAttr "type" >>= \t -> case t of
+        "string" -> KVString . unpack <$> pText
+        "integer" -> KVInteger <$> (pText >>= maybe Control.Applicative.empty pure . Text.Read.readMaybe . unpack)
+        "list" -> KVList <$> Control.Applicative.many fromXml
+        _ -> Control.Applicative.empty
 
 instance ToXml KeyValueType where
   toXml (KVString s) = text (pack s)
   toXml (KVInteger i) = text (pack (show i))
+  toXml (KVList l) = P.concatMap toXml l
 
 instance FromXml GetRequest where
   fromXml = pElement "GetRequest" $ do

@@ -1,7 +1,7 @@
 import ApiType
-import Docs()
 import Data.IORef
 import Data.Map
+import Docs ()
 import Network.Wai.Handler.Warp
 import Options.Applicative
 import Servant

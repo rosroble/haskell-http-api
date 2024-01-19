@@ -42,6 +42,12 @@
 {"key":1024,"value":"abc"}
 ```
 
+- Example (`application/json;charset=utf-8`):
+
+```javascript
+{"key":[1,"str"],"value":1002}
+```
+
 ## POST /set
 
 ### Request:

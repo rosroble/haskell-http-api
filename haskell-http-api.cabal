@@ -59,6 +59,7 @@ library
     , text
     , time
     , unordered-containers
+    , vector
     , wai
     , warp
     , xmlbf
@@ -100,6 +101,7 @@ executable haskell-http-api-exe
     , text
     , time
     , unordered-containers
+    , vector
     , wai
     , warp
     , xmlbf
@@ -146,6 +148,7 @@ test-suite haskell-http-api-test
     , text
     , time
     , unordered-containers
+    , vector
     , wai
     , warp
     , wreq
