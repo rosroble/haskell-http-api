@@ -5,11 +5,9 @@ module Main (main) where
 
 import ApiType
 import Data.Aeson
-import Data.ByteString.Lazy.Char8
 import Data.IORef
 import Data.Map
 import Network.HTTP.Types
-import Network.Wreq
 import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.JSON as HJSON
