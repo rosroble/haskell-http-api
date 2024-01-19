@@ -1,24 +1,39 @@
 import ApiType
-import           Network.Wai
-import           Network.Wai.Handler.Warp
-import           Servant
 import Data.IORef
 import Data.Map
-import ApiType
+import Docs
+import Network.Wai
+import Network.Wai.Handler.Warp
 import Options.Applicative
+import Servant
+import Servant.Docs
 import Servant.TypeScript
 
-
 data Options = Options
-  { generate :: Bool
-  } deriving Show
+  { generateClient :: Bool,
+    generateApiDocs :: Bool
+  }
+  deriving (Show)
+
+generateClientOption :: Parser Bool
+generateClientOption =
+  switch
+    ( long "generate-client"
+        <> help "Generate TypeScript client libraries for Servant"
+    )
+
+generateApiDocsOption :: Parser Bool
+generateApiDocsOption =
+  switch
+    ( long "generate-docs"
+        <> help "Generate API docs"
+    )
 
 optionsParser :: Parser Options
 optionsParser =
   Options
-    <$> switch ( long "generate"
-               <> help "Generate TypeScript client libraries for Servant"
-               )
+    <$> generateClientOption
+    <*> generateApiDocsOption
 
 main :: IO ()
 main = execParser opts >>= runWithOptions
@@ -32,17 +47,22 @@ main = execParser opts >>= runWithOptions
         )
 
 runWithOptions :: Options -> IO ()
-runWithOptions (Options generate) = do
-  if generate
+runWithOptions (Options generateClient generateApiDocs) = do
+  if generateClient
     then generateClientLibraries
-    else runServer
+    else
+      if generateApiDocs
+        then writeFile "api-docs.md" (markdown (generateDocs kvAPI))
+        else runServer
 
+generateDocs :: Proxy KVAPI -> API
+generateDocs = docs
 
-generateClientLibraries :: IO()
+generateClientLibraries :: IO ()
 generateClientLibraries = do
-    writeTypeScriptLibrary (Proxy :: Proxy KVAPI) "./apigen/"
+  writeTypeScriptLibrary (Proxy :: Proxy KVAPI) "./apigen/"
 
 runServer :: IO ()
 runServer = do
-    ref <- newIORef (Data.Map.empty :: Map KeyValueType KeyValueType)
-    run 8083 (kvapp ref)
+  ref <- newIORef (Data.Map.empty :: Map KeyValueType KeyValueType)
+  run 8083 (kvapp ref)

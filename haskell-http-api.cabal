@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       ApiType
+      Docs
   other-modules:
       Paths_haskell_http_api
   autogen-modules:
@@ -50,12 +51,14 @@ library
     , optparse-applicative
     , scientific
     , servant
+    , servant-docs
     , servant-server
     , servant-typescript
     , servant-xml
     , string-conversions
     , text
     , time
+    , unordered-containers
     , wai
     , warp
     , xmlbf
@@ -89,12 +92,14 @@ executable haskell-http-api-exe
     , optparse-applicative
     , scientific
     , servant
+    , servant-docs
     , servant-server
     , servant-typescript
     , servant-xml
     , string-conversions
     , text
     , time
+    , unordered-containers
     , wai
     , warp
     , xmlbf
@@ -132,12 +137,14 @@ test-suite haskell-http-api-test
     , optparse-applicative
     , scientific
     , servant
+    , servant-docs
     , servant-server
     , servant-typescript
     , servant-xml
     , string-conversions
     , text
     , time
+    , unordered-containers
     , wai
     , warp
     , xmlbf

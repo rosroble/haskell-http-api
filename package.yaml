@@ -46,6 +46,8 @@ dependencies:
 - xmlbf-xeno
 - optparse-applicative
 - servant-typescript
+- servant-docs
+- unordered-containers
 
 ghc-options:
 - -Wall

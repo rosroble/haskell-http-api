@@ -1,66 +1,44 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
+module ApiType (kvapp, kvAPI, KeyValueType (..), KVEntry (..), GetRequest (..), KVAPI) where
 
-
-module ApiType (kvapp, KeyValueType, KVAPI) where
-
-import Prelude ()
-import Prelude.Compat
-
-import Control.Monad.Except
-import Control.Monad.Reader
-import Control.Monad (mzero)
 import Control.Applicative (empty, (<|>))
+import Control.Monad.Except
 import Data.Aeson
-import Data.Aeson.Types
 import Data.Aeson.TypeScript.TH
-import Data.Attoparsec.ByteString
-import Data.ByteString (ByteString)
-import Data.List
-import Data.Map
-import Data.Maybe
-import Data.String.Conversions
-import Data.String (IsString, fromString)
-import Data.Time.Calendar
-import Data.Text                  as T
-import Data.Text.Encoding         as T
-import GHC.Generics
-import Lucid
-import Network.HTTP.Media ((//), (/:))
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Servant
-import System.Directory
-import Text.Blaze
-import Text.Read (readMaybe, readEither)
-import Text.Blaze.Html.Renderer.Utf8
-import Servant.Types.SourceT (source)
-import qualified Data.Aeson.Parser
-import qualified Text.Blaze.Html
-import Data.Scientific (toBoundedInteger)
+import Data.HashMap.Strict as HM
 import Data.IORef
-import Control.Monad.IO.Class (liftIO)
+import Data.Map
+import Data.Scientific (toBoundedInteger)
+import Data.String (IsString, fromString)
+import Data.Text hiding (head)
+import GHC.Generics
+import Network.Wai
+import Prelude.Compat
+import Servant
 import Servant.XML
+import Text.Read (readMaybe)
 import Xmlbf
+import Prelude ()
 
-type SetEndpoint = 
-    "set"
+type SetEndpoint =
+  "set"
     :> ReqBody '[JSON, XML] KVEntry
     :> Post '[JSON] NoContent
 
-type GetEndpoint = 
-    "get"
+type GetEndpoint =
+  "get"
     :> ReqBody '[JSON, XML] GetRequest
     :> Get '[JSON] KVEntry
 
@@ -69,52 +47,87 @@ data KeyValueType = KVString String | KVInteger Integer deriving (Eq, Show, Gene
 --- JSON ---
 
 instance FromJSON KeyValueType where
-  parseJSON (String s) = pure $ KVString (T.unpack s)
+  parseJSON (String s) = pure $ KVString (unpack s)
   parseJSON (Number n) = case toBoundedInteger n :: Maybe Int of
-                            Just i  -> pure $ KVInteger (toInteger i)
-                            Nothing -> mzero
+    Just i -> pure $ KVInteger (toInteger i)
+    Nothing -> mzero
   parseJSON _ = mzero
 
 instance ToJSON KeyValueType where
-    toJSON = genericToJSON defaultOptions
-    
+  toJSON = genericToJSON defaultOptions
+
 instance IsString KeyValueType where
-  fromString str = KVString str
+  fromString = KVString
+
+instance FromJSON KVEntry
+
+instance ToJSON KVEntry
+
+instance FromJSON GetRequest
+
+instance ToJSON GetRequest
 
 --- XML ---
-
 instance FromXml KeyValueType where
   fromXml = fromXmlString <|> fromXmlInteger
     where
-      fromXmlString = pElement "KeyValue" $
-        pAttr "type" >>= \t -> case t of
-          "string" -> KVString . T.unpack <$> pText
-          _        -> Control.Applicative.empty
+      fromXmlString =
+        pElement "KeyValue" $
+          pAttr "type" >>= \t -> case t of
+            "string" -> KVString . unpack <$> pText
+            _ -> Control.Applicative.empty
 
-      fromXmlInteger = pElement "KeyValue" $
-        pAttr "type" >>= \t -> case t of
-          "integer" -> KVInteger <$> (pText >>= maybe Control.Applicative.empty pure . Text.Read.readMaybe . T.unpack)
-          _         -> Control.Applicative.empty
+      fromXmlInteger =
+        pElement "KeyValue" $
+          pAttr "type" >>= \t -> case t of
+            "integer" -> KVInteger <$> (pText >>= maybe Control.Applicative.empty pure . Text.Read.readMaybe . unpack)
+            _ -> Control.Applicative.empty
 
-----
-data KVEntry = KVEntry {
-    key :: KeyValueType,
-    value :: KeyValueType 
-} deriving (Eq, Show, Generic)
+instance ToXml KeyValueType where
+  toXml (KVString s) = text (pack s)
+  toXml (KVInteger i) = text (pack (show i))
 
+instance FromXml GetRequest where
+  fromXml = pElement "GetRequest" $ do
+    k <- pElement "Key" fromXml
+    pure GetRequest {key = k}
 
-instance FromJSON KVEntry
-instance ToJSON KVEntry
+instance ToXml GetRequest where
+  toXml (GetRequest k) =
+    [ head $
+        element
+          "GetRequest"
+          HM.empty
+          [ head $ element "Key" HM.empty (toXml k)
+          ]
+    ]
 
 instance FromXml KVEntry where
   fromXml = pElement "SetRequest" $ do
     k <- pElement "Key" fromXml
     v <- pElement "Value" fromXml
-    pure KVEntry{ key = k, value = v}
+    pure KVEntry {key = k, value = v}
 
-data GetRequest = GetRequest {
-    key :: KeyValueType
-} deriving (Eq, Show, Generic)
+instance ToXml KVEntry where
+  toXml (KVEntry k v) =
+    element
+      "KVEntry"
+      HM.empty
+      [ head $ element "Key" HM.empty (toXml k),
+        head $ element "Value" HM.empty (toXml v)
+      ]
+
+----
+data KVEntry = KVEntry
+  { key :: KeyValueType,
+    value :: KeyValueType
+  }
+  deriving (Eq, Show, Generic)
+
+data GetRequest = GetRequest
+  { key :: KeyValueType
+  }
+  deriving (Eq, Show, Generic)
 
 --- TypeScript Client Gen ---
 
@@ -124,29 +137,23 @@ $(deriveTypeScript defaultOptions ''GetRequest)
 $(deriveTypeScript defaultOptions ''NoContent)
 
 ------------------------------
-instance FromJSON GetRequest
-
-instance FromXml GetRequest where
-  fromXml = pElement "GetRequest" $ do
-    k <- pElement "Key" fromXml
-    pure GetRequest{ key = k }
 
 type KVAPI = SetEndpoint :<|> GetEndpoint
 
 kvserver :: IORef (Map KeyValueType KeyValueType) -> Server KVAPI
-kvserver ref = serveSet
-        :<|> serveGet
+kvserver ref =
+  serveSet
+    :<|> serveGet
+  where
+    serveSet :: KVEntry -> Handler NoContent
+    serveSet (KVEntry k v) = liftIO $ modifyIORef ref (Data.Map.insert k v) >> return NoContent
 
-    where 
-        serveSet :: KVEntry -> Handler NoContent
-        serveSet (KVEntry k v) = liftIO $ modifyIORef ref (\m -> Data.Map.insert k v m) >> return NoContent
-
-        serveGet :: GetRequest -> Handler KVEntry
-        serveGet (GetRequest k) = do
-          map <- liftIO $ readIORef ref
-          case Data.Map.lookup k map of
-            Just v -> return (KVEntry k v)
-            Nothing -> throwError $ err404 {errBody = "Key not found"}
+    serveGet :: GetRequest -> Handler KVEntry
+    serveGet (GetRequest k) = do
+      mp <- liftIO $ readIORef ref
+      case Data.Map.lookup k mp of
+        Just v -> return (KVEntry k v)
+        Nothing -> throwError $ err404 {errBody = "Key not found"}
 
 kvAPI :: Proxy KVAPI
 kvAPI = Proxy
