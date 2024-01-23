@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Docs (docAsString) where

@@ -1,15 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
-
 {-# LANGUAGE MultiParamTypeClasses #-}
-
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-
 
 module ApiData (module ApiData) where
 

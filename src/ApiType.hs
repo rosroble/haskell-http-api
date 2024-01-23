@@ -217,12 +217,12 @@ kvserver ref =
 
     listPopHandler :: Bool -> ListPopRequest -> Handler ListPopResult
     listPopHandler isLeft (ListPopRequest listName) = do
-      listLen <- testListLength listName Data.Functor.<&> len
+      listLen <- (testListLength listName) >>= return . len
       if listLen < 1
         then return $ ListPopResult False "nothing to pop"
         else do
-          let popLeft = fromEnum isLeft
-          let popRight = listLen - (fromEnum $ not isLeft)
+          popLeft <- return $ fromEnum isLeft
+          popRight <- return $ listLen - (fromEnum $ not isLeft)
           popRes <- listTrim (ListTrimRequest listName popLeft popRight)
           case popRes of
             ListTrimResult True _ -> return $ ListPopResult True ""
@@ -260,13 +260,13 @@ kvserver ref =
     appendOrPrepend False lst new = lst P.++ [new]
 
     lookupMultiple :: Data.Map.Map KeyValueType KeyValueType -> [String] -> [StringGetResult]
+    lookupMultiple mp ks = P.map (lookupToStringGetResult mp) ks
 
     lookupToStringGetResult :: Data.Map.Map KeyValueType KeyValueType -> String -> StringGetResult
     lookupToStringGetResult mp k =
       case Data.Map.lookup (KVString k) mp of
         Just v -> StringGetResult True v
         Nothing -> StringGetResult False ""
-    lookupMultiple mp = P.map (lookupToStringGetResult mp)
 
 kvAPI :: Proxy KVAPI
 kvAPI = Proxy
