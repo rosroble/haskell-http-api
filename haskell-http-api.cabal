@@ -25,8 +25,10 @@ source-repository head
 
 library
   exposed-modules:
+      ApiData
       ApiType
       Docs
+      Serialization
   other-modules:
       Paths_haskell_http_api
   autogen-modules:
@@ -124,6 +126,7 @@ test-suite haskell-http-api-test
     , attoparsec
     , base
     , base-compat
+    , binary
     , blaze-html
     , blaze-markup
     , bytestring
@@ -148,6 +151,7 @@ test-suite haskell-http-api-test
     , text
     , time
     , unordered-containers
+    , utf8-string
     , vector
     , wai
     , warp
