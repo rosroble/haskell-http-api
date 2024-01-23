@@ -3,8 +3,8 @@
 
 module Main (main) where
 
-import ApiType
 import ApiData
+import ApiType
 import Data.Aeson as A
 import Data.IORef
 import Data.Map

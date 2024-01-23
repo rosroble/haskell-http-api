@@ -1,27 +1,26 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
+
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
-module Serialization() where
+
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+module Serialization () where
 
 import ApiData
-
 import Control.Applicative (empty, many)
 import Control.Monad.Except
 import Data.Aeson
 import Data.HashMap.Strict as HM
 import Data.Scientific (toBoundedInteger)
-import Data.Text as T hiding (head) 
+import Data.Text as T hiding (head)
 import Data.Vector as V hiding (head)
 import Prelude.Compat
 import Text.Read (readMaybe)
@@ -124,18 +123,18 @@ instance FromXml StringGetResult where
     v <- pElement "Value" fromXml
     pure $ StringGetResult ok v
 
-instance FromXml StringMGetRequest where 
-    fromXml = pElement "StringMGetRequest" $ do
-      strkeys <- pElement "StringKeys" (Control.Applicative.many $ T.unpack <$> pText)
-      pure $ StringMGetRequest strkeys
+instance FromXml StringMGetRequest where
+  fromXml = pElement "StringMGetRequest" $ do
+    strkeys <- pElement "StringKeys" (Control.Applicative.many $ T.unpack <$> pText)
+    pure $ StringMGetRequest strkeys
 
-instance FromXml StringMGetResult where 
-    fromXml = pElement "StringMGetResult" $ do
-      strkeys <- pElement "Results" (Control.Applicative.many $ fromXml)
-      pure $ StringMGetResult strkeys
-  
+instance FromXml StringMGetResult where
+  fromXml = pElement "StringMGetResult" $ do
+    strkeys <- pElement "Results" (Control.Applicative.many fromXml)
+    pure $ StringMGetResult strkeys
+
 instance ToXml StringSetRequest where
-  toXml (StringSetRequest k v) = 
+  toXml (StringSetRequest k v) =
     element
       "StringSetRequest"
       HM.empty
@@ -144,7 +143,7 @@ instance ToXml StringSetRequest where
       ]
 
 instance ToXml StringSetNXResult where
-  toXml (StringSetNXResult ok) = 
+  toXml (StringSetNXResult ok) =
     element
       "StringSetNXResult"
       HM.empty
@@ -152,15 +151,15 @@ instance ToXml StringSetNXResult where
       ]
 
 instance ToXml StringGetRequest where
-  toXml (StringGetRequest k) = 
+  toXml (StringGetRequest k) =
     element
       "StringGetRequest"
       HM.empty
       [ head $ element "StringKey" HM.empty (text (T.pack k))
       ]
-      
+
 instance ToXml StringGetResult where
-  toXml (StringGetResult ok v) = 
+  toXml (StringGetResult ok v) =
     element
       "StringGetResult"
       HM.empty
@@ -169,14 +168,14 @@ instance ToXml StringGetResult where
       ]
 
 instance ToXml StringMGetRequest where
-  toXml (StringMGetRequest ks) = 
+  toXml (StringMGetRequest ks) =
     element
       "StringMGetRequest"
       HM.empty
       (P.concatMap (text . T.pack) ks)
 
 instance ToXml StringMGetResult where
-  toXml (StringMGetResult ks) = 
+  toXml (StringMGetResult ks) =
     element
       "StringMGetResult"
       HM.empty
@@ -208,8 +207,8 @@ instance FromXml ListPopResult where
 instance FromXml ListTrimRequest where
   fromXml = pElement "ListTrimRequest" $ do
     name <- pElement "Name" (T.unpack <$> pText)
-    start <- pElement "Start" (read <$> T.unpack <$> pText)
-    stop <- pElement "Stop" (read <$> T.unpack <$> pText)
+    start <- pElement "Start" (read P.. T.unpack P.<$> pText)
+    stop <- pElement "Stop" (read P.. T.unpack P.<$> pText)
     pure $ ListTrimRequest name start stop
 
 instance FromXml ListTrimResult where
@@ -226,19 +225,20 @@ instance FromXml ListLenRequest where
 instance FromXml ListLenResult where
   fromXml = pElement "ListLenResult" $ do
     ok <- pElement "Success" (textToBool <$> pText)
-    len <- pElement "Len" (read <$> T.unpack <$> pText)
+    len <- pElement "Len" (read P.. T.unpack P.<$> pText)
     pure $ ListLenResult ok len
 
 instance ToXml ListPushRequest where
-  toXml (ListPushRequest name v) = 
+  toXml (ListPushRequest name v) =
     element
       "ListPushRequest"
       HM.empty
       [ head $ element "Name" HM.empty (text (T.pack name)),
         head $ element "Value" HM.empty (toXml v)
       ]
+
 instance ToXml ListPushResult where
-  toXml (ListPushResult ok err) = 
+  toXml (ListPushResult ok err) =
     element
       "ListPushResult"
       HM.empty
@@ -247,14 +247,14 @@ instance ToXml ListPushResult where
       ]
 
 instance ToXml ListPopRequest where
-  toXml (ListPopRequest name) = 
+  toXml (ListPopRequest name) =
     element
       "ListPopRequest"
       HM.empty
-      [ head $ element "Name" HM.empty (text (T.pack name))]
+      [head $ element "Name" HM.empty (text (T.pack name))]
 
 instance ToXml ListPopResult where
-  toXml (ListPopResult ok err) = 
+  toXml (ListPopResult ok err) =
     element
       "ListPopResult"
       HM.empty
@@ -263,7 +263,7 @@ instance ToXml ListPopResult where
       ]
 
 instance ToXml ListTrimRequest where
-  toXml (ListTrimRequest name start stop) = 
+  toXml (ListTrimRequest name start stop) =
     element
       "ListPushRequest"
       HM.empty
@@ -271,8 +271,9 @@ instance ToXml ListTrimRequest where
         head $ element "Start" HM.empty (text (T.pack (show start))),
         head $ element "Stop" HM.empty (text (T.pack (show stop)))
       ]
+
 instance ToXml ListTrimResult where
-  toXml (ListTrimResult ok err) = 
+  toXml (ListTrimResult ok err) =
     element
       "ListTrimResult"
       HM.empty
@@ -281,14 +282,14 @@ instance ToXml ListTrimResult where
       ]
 
 instance ToXml ListLenRequest where
-  toXml (ListLenRequest name) = 
+  toXml (ListLenRequest name) =
     element
       "ListLenRequest"
       HM.empty
-      [ head $ element "Name" HM.empty (text (T.pack name))]
+      [head $ element "Name" HM.empty (text (T.pack name))]
 
 instance ToXml ListLenResult where
-  toXml (ListLenResult ok len) = 
+  toXml (ListLenResult ok len) =
     element
       "ListLenResult"
       HM.empty
@@ -296,36 +297,58 @@ instance ToXml ListLenResult where
         head $ element "Len" HM.empty (text (T.pack (show len)))
       ]
 
+instance FromJSON StringSetRequest
 
-      
-instance FromJSON StringSetRequest where
-instance FromJSON StringSetNXResult where
-instance FromJSON StringGetRequest where
-instance FromJSON StringGetResult where
-instance FromJSON StringMGetRequest where 
-instance FromJSON StringMGetResult where
+instance FromJSON StringSetNXResult
 
-instance ToJSON StringSetRequest where
-instance ToJSON StringSetNXResult where
-instance ToJSON StringGetRequest where
-instance ToJSON StringGetResult where
-instance ToJSON StringMGetRequest where 
-instance ToJSON StringMGetResult where
+instance FromJSON StringGetRequest
 
-instance ToJSON ListPushRequest where
-instance ToJSON ListPushResult where
-instance ToJSON ListPopRequest where
-instance ToJSON ListPopResult where
-instance ToJSON ListTrimRequest where
-instance ToJSON ListTrimResult where
-instance ToJSON ListLenRequest where
-instance ToJSON ListLenResult where
+instance FromJSON StringGetResult
 
-instance FromJSON ListPushRequest where
-instance FromJSON ListPushResult where
-instance FromJSON ListPopRequest where
-instance FromJSON ListPopResult where
-instance FromJSON ListTrimRequest where
-instance FromJSON ListTrimResult where
-instance FromJSON ListLenRequest where
-instance FromJSON ListLenResult where
+instance FromJSON StringMGetRequest
+
+instance FromJSON StringMGetResult
+
+instance ToJSON StringSetRequest
+
+instance ToJSON StringSetNXResult
+
+instance ToJSON StringGetRequest
+
+instance ToJSON StringGetResult
+
+instance ToJSON StringMGetRequest
+
+instance ToJSON StringMGetResult
+
+instance ToJSON ListPushRequest
+
+instance ToJSON ListPushResult
+
+instance ToJSON ListPopRequest
+
+instance ToJSON ListPopResult
+
+instance ToJSON ListTrimRequest
+
+instance ToJSON ListTrimResult
+
+instance ToJSON ListLenRequest
+
+instance ToJSON ListLenResult
+
+instance FromJSON ListPushRequest
+
+instance FromJSON ListPushResult
+
+instance FromJSON ListPopRequest
+
+instance FromJSON ListPopResult
+
+instance FromJSON ListTrimRequest
+
+instance FromJSON ListTrimResult
+
+instance FromJSON ListLenRequest
+
+instance FromJSON ListLenResult

@@ -1,14 +1,14 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Docs (docAsString) where
 
 import ApiData
-import Data.String (IsString(..))
+import Data.String (IsString (..))
 import Servant
 import Servant.Docs
 
@@ -37,21 +37,33 @@ instance ToSample KVEntry where
 instance ToSample GetRequest where
   toSamples _ = singleSample (GetRequest "key_to_lookup")
 
-instance ToSample StringSetRequest where
-instance ToSample StringSetNXResult where
-instance ToSample StringGetRequest where
-instance ToSample StringGetResult where
-instance ToSample StringMGetRequest where 
-instance ToSample StringMGetResult where
+instance ToSample StringSetRequest
 
-instance ToSample ListPushRequest where
-instance ToSample ListPushResult where
-instance ToSample ListPopRequest where
-instance ToSample ListPopResult where
-instance ToSample ListTrimRequest where
-instance ToSample ListTrimResult where
-instance ToSample ListLenRequest where
-instance ToSample ListLenResult where
+instance ToSample StringSetNXResult
 
-docAsString :: HasDocs a => Proxy a -> String
+instance ToSample StringGetRequest
+
+instance ToSample StringGetResult
+
+instance ToSample StringMGetRequest
+
+instance ToSample StringMGetResult
+
+instance ToSample ListPushRequest
+
+instance ToSample ListPushResult
+
+instance ToSample ListPopRequest
+
+instance ToSample ListPopResult
+
+instance ToSample ListTrimRequest
+
+instance ToSample ListTrimResult
+
+instance ToSample ListLenRequest
+
+instance ToSample ListLenResult
+
+docAsString :: (HasDocs a) => Proxy a -> String
 docAsString api = markdown (docs api)

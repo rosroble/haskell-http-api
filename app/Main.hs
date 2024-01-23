@@ -5,7 +5,6 @@ import Docs (docAsString)
 import Network.Wai.Handler.Warp
 import Options.Applicative
 import Servant
-import Servant.Docs
 import Servant.TypeScript
 
 data Options = Options
