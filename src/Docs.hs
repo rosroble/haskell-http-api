@@ -36,33 +36,47 @@ instance ToSample KVEntry where
 instance ToSample GetRequest where
   toSamples _ = singleSample (GetRequest "key_to_lookup")
 
-instance ToSample StringSetRequest
+instance ToSample StringSetRequest where
+  toSamples _ = singleSample (StringSetRequest "some_str_key" "some_str_val")
 
-instance ToSample StringSetNXResult
+instance ToSample StringSetNXResult where
+  toSamples _ = singleSample (StringSetNXResult True)
 
-instance ToSample StringGetRequest
+instance ToSample StringGetRequest where
+  toSamples _ = singleSample (StringGetRequest "some_str_key")
 
-instance ToSample StringGetResult
+instance ToSample StringGetResult where
+  toSamples _ = singleSample (StringGetResult True (KVString "some_str_key"))
 
-instance ToSample StringMGetRequest
+instance ToSample StringMGetRequest where
+  toSamples _ = singleSample (StringMGetRequest ["some_str_key", "another_str_key"])
 
-instance ToSample StringMGetResult
+instance ToSample StringMGetResult where
+  toSamples _ = singleSample $ StringMGetResult [StringGetResult True (KVString "some_str_key"), StringGetResult True (KVString "another_str_key")]
 
-instance ToSample ListPushRequest
+instance ToSample ListPushRequest where
+  toSamples _ = singleSample $ ListPushRequest "some_str_key" (KVInteger 3)
 
-instance ToSample ListPushResult
+instance ToSample ListPushResult where
+  toSamples _ = singleSample (ListPushResult False "error")
 
-instance ToSample ListPopRequest
+instance ToSample ListPopRequest where
+  toSamples _ = singleSample (ListPopRequest "somelist")
 
-instance ToSample ListPopResult
+instance ToSample ListPopResult where
+  toSamples _ = singleSample (ListPopResult True "")
 
-instance ToSample ListTrimRequest
+instance ToSample ListTrimRequest where
+  toSamples _ = singleSample (ListTrimRequest "list" 1 5)
 
-instance ToSample ListTrimResult
+instance ToSample ListTrimResult where
+  toSamples _ = singleSample (ListTrimResult True "")
 
-instance ToSample ListLenRequest
+instance ToSample ListLenRequest where
+  toSamples _ = singleSample (ListLenRequest "listname")
 
-instance ToSample ListLenResult
+instance ToSample ListLenResult where
+  toSamples _ = singleSample (ListLenResult True 15)
 
 docAsString :: (HasDocs a) => Proxy a -> String
 docAsString api = markdown (docs api)
