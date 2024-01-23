@@ -1,7 +1,7 @@
 import ApiType
 import Data.IORef
 import Data.Map
-import Docs ()
+import Docs (docAsString)
 import Network.Wai.Handler.Warp
 import Options.Applicative
 import Servant
@@ -51,11 +51,8 @@ runWithOptions (Options genclient gendocs) = do
     then generateClientLibraries
     else
       if gendocs
-        then writeFile "api-docs.md" (markdown (generateDocs kvAPI))
+        then writeFile "api-docs.md" (docAsString kvAPI)
         else runServer
-
-generateDocs :: Proxy KVAPI -> API
-generateDocs = docs
 
 generateClientLibraries :: IO ()
 generateClientLibraries = do

@@ -93,3 +93,5 @@ tests:
     - http-types
     - aeson
     - wreq
+    - binary
+    - utf8-string
